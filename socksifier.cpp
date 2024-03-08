@@ -8,6 +8,7 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 // Define Proxy IP and Port.
+// Define Username & Password.
 const char* _username = "username";
 const char* _password = "password";
 const char* _proxyIP = "127.0.0.1";
