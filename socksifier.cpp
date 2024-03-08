@@ -23,7 +23,7 @@ int SOCKS4Protocol(SOCKET s, const struct sockaddr_in* dest)
 {
 	char buffer[256];
 	buffer[0] = 0x04; // Version
-	buffer[1] = 0x01; // Connect request
+	buffer[1] = 0x01; // CONNECT request
 	buffer[2] = (dest->sin_port >> 0) & 0xFF;
 	buffer[3] = (dest->sin_port >> 8) & 0xFF;
 	buffer[4] = (dest->sin_addr.s_addr >> 0) & 0xFF;
@@ -64,7 +64,7 @@ int SOCKS5Protocol(SOCKET s, const struct sockaddr_in* dest)
 		}
 	}
 
-	buffer[0] = 0x01;
+	buffer[0] = 0x01; // CONNECT request
 	buffer[1] = strlen(_username); // Username length
 	sprintf_s(&buffer[2], 256 - 2, "%s", _username); // Username
 	buffer[buffer[1] + 2] = strlen(_password); // Password length
@@ -116,9 +116,7 @@ int WSAAPI proxyWSAConnect(SOCKET s, const struct sockaddr* name, int namelen, L
 	// Ignore IPv6.
 	if (name->sa_family == AF_INET6)
 	{
-		//printf("IPv6 detected. Re-routing back through direct connection.\n\n");
-
-		return realWSAConnect(s, name, namelen, lpCallerData, lpCalleeData, lpSQOS, lpGQOS);
+		return realWSAConnect(s, name, namelen, lpCallerData, lpCalleeData, lpSQOS, lpGQOS); // Re-route through original call.
 	}
 
 	// Get Original Packet information.
@@ -127,9 +125,7 @@ int WSAAPI proxyWSAConnect(SOCKET s, const struct sockaddr* name, int namelen, L
 	// Ignore loopback calls.
 	if (destination->sin_addr.s_addr == htonl(INADDR_LOOPBACK))
 	{
-		//printf("Loopback (IP: %s:%ld) detected. Re-routing back through direct connection.\n\n", inet_ntoa(destination->sin_addr), htons(destination->sin_port));
-
-		return realWSAConnect(s, name, namelen, lpCallerData, lpCalleeData, lpSQOS, lpGQOS);
+		return realWSAConnect(s, name, namelen, lpCallerData, lpCalleeData, lpSQOS, lpGQOS); // Re-route through original call.
 	}
 
 	// Define New (Proxy) IP Address & Port.
@@ -147,17 +143,14 @@ int WSAAPI proxyWSAConnect(SOCKET s, const struct sockaddr* name, int namelen, L
 	// Set TCP_NODELAY to TRUE on the Socket.
 	setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&noDelay, sizeof(noDelay));
 
+	// Connect to proxy.
 	realConnect(s, (const struct sockaddr*)&proxy, sizeof(proxy));
-
-	//printf("Attempting SOCKS4/5 authentication..\n");
 
 	int index = 0;
 	while (true)
 	{
 		if (index == 2) // 3 Attempts.
 		{
-			//printf("Authentication failed.\n");
-
 			return realWSAConnect(s, name, namelen, lpCallerData, lpCalleeData, lpSQOS, lpGQOS); // Return to orig. call
 		}
 
@@ -175,9 +168,7 @@ int WSAAPI proxyWSAConnect(SOCKET s, const struct sockaddr* name, int namelen, L
 
 		index++;
 	}
-
-	//printf("Authentication successful. Proxification tunnel opened to %s:%ld\n\n", inet_ntoa(destination->sin_addr), htons(destination->sin_port));
-
+	
 	return 0;
 }
 
@@ -187,9 +178,7 @@ int WSAAPI proxyConnect(SOCKET s, const struct sockaddr* name, int namelen)
 	// Ignore IPv6.
 	if (name->sa_family == AF_INET6)
 	{
-		//printf("IPv6 detected. Re-routing back through direct connection.\n\n");
-
-		return realConnect(s, name, namelen);
+		return realConnect(s, name, namelen); // Re-route through original call.
 	}
 	
 	// Get Original Packet information.
@@ -198,9 +187,7 @@ int WSAAPI proxyConnect(SOCKET s, const struct sockaddr* name, int namelen)
 	// Ignore loopback calls.
 	if (destination->sin_addr.s_addr == htonl(INADDR_LOOPBACK))
 	{
-		//printf("Loopback (IP: %s:%ld) detected. Re-routing back through direct connection.\n\n", inet_ntoa(destination->sin_addr), htons(destination->sin_port));
-
-		return realConnect(s, name, namelen);
+		return realConnect(s, name, namelen); // Re-route through original call.
 	}
 
 	// Define New (Proxy) IP Address & Port.
@@ -218,17 +205,14 @@ int WSAAPI proxyConnect(SOCKET s, const struct sockaddr* name, int namelen)
 	// Set TCP_NODELAY to TRUE on the Socket.
 	setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&noDelay, sizeof(noDelay));
 
+	// Connect to proxy.
 	realConnect(s, (const struct sockaddr*)&proxy, sizeof(proxy));
-
-	//printf("Attempting SOCKS4/5 authentication..\n");
-
+	
 	int index = 0;
 	while (true)
 	{
 		if (index == 2) // 3 Attempts.
 		{
-			//printf("Authentication failed.\n");
-
 			return realConnect(s, name, namelen, lpCallerData, lpCalleeData, lpSQOS, lpGQOS); // Return to orig. call
 		}
 
@@ -247,32 +231,16 @@ int WSAAPI proxyConnect(SOCKET s, const struct sockaddr* name, int namelen)
 		index++;
 	}
 
-	//printf("Authentication successful. Proxification tunnel opened to %s:%ld\n\n", inet_ntoa(destination->sin_addr), htons(destination->sin_port));
-
 	return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 {
-	//AllocConsole();
-	//AttachConsole(GetCurrentProcessId());
-	//freopen("CON", "w", stdout);
-
 	DetourTransactionBegin();
 	DetourUpdateThread(GetCurrentThread());
 	DetourAttach(&(PVOID&)realWSAConnect, proxyWSAConnect);
 	DetourAttach(&(PVOID&)realConnect, proxyConnect);
 	DetourTransactionCommit();
-
-	//if (DetourTransactionCommit() == NO_ERROR)
-	//{
-	//	printf("Hooks installed.\n\n");
-	//}
-
-	//else
-	//{
-	//	printf("Failed to install hooks.\n\n");
-	//}
 
 	return TRUE;
 }
