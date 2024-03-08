@@ -229,7 +229,7 @@ int WSAAPI proxyConnect(SOCKET s, const struct sockaddr* name, int namelen)
 		{
 			//printf("Authentication failed.\n");
 
-			return realWSAConnect(s, name, namelen, lpCallerData, lpCalleeData, lpSQOS, lpGQOS); // Return to orig. call
+			return realConnect(s, name, namelen, lpCallerData, lpCalleeData, lpSQOS, lpGQOS); // Return to orig. call
 		}
 
 		// SOCKS5
