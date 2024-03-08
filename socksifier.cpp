@@ -30,7 +30,7 @@ int SOCKS4Protocol(SOCKET s, const struct sockaddr_in* dest)
 	buffer[5] = (dest->sin_addr.s_addr >> 8) & 0xFF;
 	buffer[6] = (dest->sin_addr.s_addr >> 16) & 0xFF;
 	buffer[7] = (dest->sin_addr.s_addr >> 24) & 0xFF;
-	sprintf_s( &buffer[ 8 ], 256 - 8, "%s", _username ); // Username
+	sprintf_s(&buffer[8], 256 - 8, "%s", _username); // Username
 	send(s, buffer, 8 + strlen(_username), 0);
 
 	recv(s, buffer, 8, 0);
