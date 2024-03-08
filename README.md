@@ -1,5 +1,5 @@
 # socksifier
-Example code to proxify TCP connections through a SOCKS4 or SOCKS5 proxy. Achieved by hooking the WinSock2 Connect and WSAConnect functions and re-routing them to the specified proxy address and port.  
+Basic / example code to proxify TCP connections through a SOCKS4 or SOCKS5 proxy. Achieved by hooking the WinSock2 Connect and WSAConnect functions and re-routing them to the specified proxy address and port.  
 This example uses Microsoft Detours for hooking.
 
 - **SOCKS5:**
